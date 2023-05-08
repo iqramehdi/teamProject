@@ -1,114 +1,71 @@
-import React, { useState } from "react";
-import ReactDatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+import React, { useState, useEffect } from 'react';
+import './History.css';
+import EditList from "./EditList";
+import AddList from "./AddList";
 
 function History() {
-  const [links, setLinks] = useState(
-    JSON.parse(localStorage.getItem("links")) || []
-  );
+  const [lists, setList] = useState(JSON.parse(localStorage.getItem('lists')) || []);
+  const [updateState, setUpdateState] = useState(-1);
 
-  const handleDeleteLink = (id) => {
-    const newLinks = links.filter((link) => link.id !== id);
-    setLinks(newLinks);
-    localStorage.setItem("links", JSON.stringify(newLinks));
-  };
+  useEffect(() => {
+    localStorage.setItem('lists', JSON.stringify(lists));
+  }, [lists]);
 
-  const handleUpdateDate = (id) => {
-    const linkToUpdate = links.find((link) => link.id === id);
-    const newDate = prompt("Enter new date (YYYY-MM-DD):", linkToUpdate.date);
-    if (newDate) {
-      const newLinks = links.map((link) => {
-        if (link.id === id) {
-          return {
-            ...link,
-            date: newDate,
-          };
-        }
-        return link;
-      });
-      setLinks(newLinks);
-      localStorage.setItem("links", JSON.stringify(newLinks));
-    }
-  };
-  function isValidDate(dateString) {
-    const date = new Date(dateString);
-    return date instanceof Date && !isNaN(date);
+  function handleEdit(id) {
+    setUpdateState(id);
   }
-  const handleCopyLink = (id) => {
-    const newLinks = links.map((link) => {
-      if (link.id === id) {
-        return {
-          ...link,
-          copied: true,
-        };
-      }
-      return link;
-    });
-    setLinks(newLinks);
-    const shortUrl = newLinks.find((link) => link.id === id).shortUrl;
-    navigator.clipboard.writeText(shortUrl);
-  };
+
+  function handleDelete(id) {
+    const newlist = lists.filter((li) => li.id !== id);
+    setList(newlist);
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    const url = event.target.elements.url.value;
+    const surl = event.target.elements.surl.value;
+    const edate = event.target.elements.edate.value;
+
+    if (!url || !surl || !edate) {
+      return;
+    }
+
+    const newlist = lists.map((li) => (
+      li.id === updateState ? { ...li, url: url, surl: surl, edate: edate } : li
+    ));
+
+    setList(newlist);
+    setUpdateState(-1);
+    event.target.reset();
+  }
 
   return (
-    <div className="container">
-      <h1>History Page</h1>
-      <table className="table table-bordered">
-        <thead>
-          <tr>
-            <th>Original URL</th>
-            <th>Short URL</th>
-            <th>Expiry Date</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {links.map((link) => (
-            <tr key={link.id}>
-              <td>{link.url}</td>
-              <td>{link.shortUrl}</td>
-              <td>
-                
-              <ReactDatePicker
-  selected={
-    isValidDate(link.date) ? new Date(link.date) : null
-  }
-  onChange={(date) => {
-    const newDate = date.toISOString().slice(0, 10);
-    handleUpdateDate(link.id, newDate);
-  }}
-/>
-
-              </td>
-              <td>
-              <button
-                className="btn btn-danger mr-2"
-                onClick={() => {
-                  if (window.confirm("Are you sure you want to delete this link?")) {
-                    handleDeleteLink(link.id);
-                  }
-                }}
-              >
-                Delete
-              </button>
-
-                <button
-                  className="btn btn-info mr-2"
-                  onClick={() => handleUpdateDate(link.id)}
-                >
-                  Update
-                </button>
-                <button
-                  className="btn btn-success"
-                  onClick={() => handleCopyLink(link.id)}
-                  disabled={link.copied}
-                >
-                  {link.copied ? "Copied" : "Copy"}
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className='crud'>
+      <div>
+        <AddList setList={setList} />
+        <form onSubmit={handleSubmit}>
+        {lists.length>0&&<>
+          <table>
+            {
+              lists.map((current) => (
+                updateState === current.id ?
+                  <EditList current={current} lists={lists} setList={setList} key={current.id} /> :
+                  <tr key={current.id}>
+                    <td>{current.url}</td>
+                    <td>{current.surl}</td>
+                    <td>{current.edate}</td>
+                    <td>
+                      <button className='edit' onClick={() => handleEdit(current.id)}>Edit</button>
+                      <button className='delete' type='button' onClick={() => handleDelete(current.id)}>Delete</button>
+                    </td>
+                  </tr>
+              ))
+            }
+          </table>
+          </>}
+            {lists.length < 1 && <div>No data added yet</div>}
+        </form>
+      </div>
     </div>
   );
 }
